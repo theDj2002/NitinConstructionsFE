@@ -10,7 +10,7 @@
  * Integration: see bottom of file.
  */
 
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Star, User, MessageSquare, Send, Loader2, X, CheckCircle, PenLine, ChevronLeft } from 'lucide-react';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -277,23 +277,26 @@ function ReviewsPanel({ projectId, projectName }) {
     const [loading, setLoading] = useState(true);
     const [tab, setTab]         = useState('list'); // 'list' | 'write'
 
-    const load = useCallback(async () => {
-        setLoading(true);
-        try {
-            // ── Replace with real API ──────────────────────────────────────────
-            // const { reviewsApi } = await import('@/services/api');
-            // const res = await reviewsApi.getByProject(projectId);
-            // setReviews(res.data || []);
-            setReviews([]); // mock: empty initially
-            // ──────────────────────────────────────────────────────────────────
-        } catch {
-            setReviews([]);
-        } finally {
-            setLoading(false);
-        }
+    useEffect(() => {
+        let cancelled = false;
+        const load = async () => {
+            setLoading(true);
+            try {
+                // ── Replace with real API ──────────────────────────────────────────
+                // const { reviewsApi } = await import('@/services/api');
+                // const res = await reviewsApi.getByProject(projectId);
+                // if (!cancelled) setReviews(res.data || []);
+                if (!cancelled) setReviews([]); // mock: empty initially
+                // ────────────────────────────────────────────────────────────────
+            } catch {
+                if (!cancelled) setReviews([]);
+            } finally {
+                if (!cancelled) setLoading(false);
+            }
+        };
+        load();
+        return () => { cancelled = true; };
     }, [projectId]);
-
-    useEffect(() => { load(); }, [load]);
 
     const handleNew = (review) => {
         setReviews((prev) => [review, ...prev]);
