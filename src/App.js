@@ -13,6 +13,9 @@ import Footer from '@/components/Footer';
 import AdminDashboard from '@/pages/AdminDashboard';
 import ReviewsSection from '@/components/ReviewsSection';
 
+// ─── NEW: Intro Animation ──────────────────────────────────────────────────
+import IntroAnimation from '@/components/IntroAnimation';
+
 function LandingPage() {
     return (
         <>
@@ -30,19 +33,28 @@ function LandingPage() {
 
 function App() {
     return (
-        <ThemeProvider>
-            <AuthProvider>
-                <BrowserRouter>
-                    <div className="min-h-screen bg-background text-foreground transition-colors duration-300">
-                        <Navbar />
-                        <Routes>
-                            <Route path="/" element={<LandingPage />} />
-                            <Route path="/admin" element={<AdminDashboard />} />
-                        </Routes>
-                    </div>
-                </BrowserRouter>
-            </AuthProvider>
-        </ThemeProvider>
+        <>
+            {/*
+             * IntroAnimation sits OUTSIDE ThemeProvider / BrowserRouter so it
+             * renders on top of everything. It plays once per session and
+             * unmounts itself automatically after ~6.8 s.
+             */}
+            <IntroAnimation />
+
+            <ThemeProvider>
+                <AuthProvider>
+                    <BrowserRouter>
+                        <div className="min-h-screen bg-background text-foreground transition-colors duration-300">
+                            <Navbar />
+                            <Routes>
+                                <Route path="/" element={<LandingPage />} />
+                                <Route path="/admin" element={<AdminDashboard />} />
+                            </Routes>
+                        </div>
+                    </BrowserRouter>
+                </AuthProvider>
+            </ThemeProvider>
+        </>
     );
 }
 

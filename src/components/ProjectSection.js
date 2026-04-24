@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { projectsApi } from '@/services/api';
 import { MapPin, Calendar, ImageOff, Loader2, ChevronLeft, ChevronRight, X } from 'lucide-react';
+import { ProjectReviewsModal } from '@/components/ProjectReviews';
 
 // ─── Image Lightbox ───────────────────────────────────────────────────────────
 function Lightbox({ images, startIndex, onClose }) {

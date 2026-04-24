@@ -1,6 +1,6 @@
 import { ArrowRight, Clock, FolderOpen, ThumbsUp } from 'lucide-react';
-
-const HERO_BG = 'https://static.prod-images.emergentagent.com/jobs/15f9dbc9-4537-4ac5-a5d0-cb315a4d17fd/images/ae9eaeac7f63926d36ad56e20b3368c0176259604547a837d7776efb5556fa78.png';
+import HERO_BG from "./assets/poster-main.png"
+// const HERO_BG = 'https://static.prod-images.emergentagent.com/jobs/15f9dbc9-4537-4ac5-a5d0-cb315a4d17fd/images/ae9eaeac7f63926d36ad56e20b3368c0176259604547a837d7776efb5556fa78.png';
 
 const stats = [
   { icon: Clock, value: '14+', label: 'Years Experience' },

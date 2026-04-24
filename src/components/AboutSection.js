@@ -1,7 +1,7 @@
 import { CheckCircle } from 'lucide-react';
 
-const ABOUT_IMAGE = 'https://customer-assets.emergentagent.com/job_nkp-construction/artifacts/yv1w73t4_Poster-1.png';
-
+// const ABOUT_IMAGE = 'https://customer-assets.emergentagent.com/job_nkp-construction/artifacts/yv1w73t4_Poster-1.png';
+import ABOUT_IMAGE from "./assets/NKP-Poster.png"
 const highlights = [
   'Quality materials and workmanship guaranteed',
   'On-time project delivery with transparent process',
