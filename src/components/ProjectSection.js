@@ -160,6 +160,14 @@ function ProjectCard({ project }) {
                             )}
                         </div>
                     )}
+
+                    {/* ⭐ Project Reviews Button */}
+                    <div className="mt-4 pt-4 border-t border-border flex justify-end">
+                        <ProjectReviewsModal
+                            projectId={project.id}
+                            projectName={project.name}
+                        />
+                    </div>
                 </div>
             </div>
         </>
