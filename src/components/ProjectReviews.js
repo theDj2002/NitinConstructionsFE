@@ -494,7 +494,7 @@ export function ProjectReviewsSection({ projectId, projectName }) {
                     open ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'
                 }`}
                 style={{ background: 'rgba(2,6,23,0.92)', backdropFilter: 'blur(8px)' }}
-                onClick={() => setOpen(false)}
+                onClick={(e) => { e.stopPropagation(); setOpen(false); }}
             >
                 <div
                     className={`relative w-full sm:max-w-lg bg-[#0b1120] border border-white/10
@@ -513,7 +513,7 @@ export function ProjectReviewsSection({ projectId, projectName }) {
                         </div>
                         <button
                             type="button"
-                            onClick={() => setOpen(false)}
+                            onClick={(e) => { e.stopPropagation(); setOpen(false); }}
                             className="w-8 h-8 rounded-full bg-white/10 flex items-center justify-center
                                        text-gray-400 hover:text-white hover:bg-white/20 transition-all"
                         >
