@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { Navigate, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
 import { projectsApi, reviewsApi } from '@/services/api';
@@ -36,7 +36,7 @@ function ProjectFormModal({ project, onClose, onSaved }) {
     isVisible: project?.isVisible ?? true,
     order: project?.order ?? 0,
   });
-  const [imageFile, setImageFile] = useState(null);
+  const [imageFiles, setImageFiles] = useState([]);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
 
@@ -63,9 +63,12 @@ function ProjectFormModal({ project, onClose, onSaved }) {
         const res = await projectsApi.create(payload);
         saved = res.data;
       }
-      // If a new image was selected, upload it
-      if (imageFile) {
-        const imgRes = await projectsApi.uploadImage(saved.id, imageFile);
+      // Upload selected images (single or multi)
+      if (imageFiles.length === 1) {
+        const imgRes = await projectsApi.uploadImage(saved.id, imageFiles[0]);
+        saved = imgRes.data;
+      } else if (imageFiles.length > 1) {
+        const imgRes = await projectsApi.uploadImages(saved.id, imageFiles);
         saved = imgRes.data;
       }
       onSaved(saved, isEdit);
@@ -158,21 +161,40 @@ function ProjectFormModal({ project, onClose, onSaved }) {
               <span className="text-sm font-medium text-foreground">Visible on public site</span>
             </label>
 
-            {/* Image upload (optional, adds first image) */}
+            {/* Image upload (optional) — supports multiple */}
             <div>
               <label className="block text-sm font-medium text-foreground mb-1">
-                {isEdit ? 'Add Image (optional)' : 'Cover Image (optional)'}
+                {isEdit ? 'Add Images (optional)' : 'Images (optional)'}
               </label>
               <label className="flex items-center gap-2 cursor-pointer px-3 py-2 rounded-lg border border-dashed border-border hover:border-gold/50 bg-background text-sm text-muted-foreground transition-colors">
                 <ImagePlus className="w-4 h-4" />
-                {imageFile ? imageFile.name : 'Choose image…'}
+                <span className="truncate flex-1">
+                  {imageFiles.length === 0 ? 'Choose images…' :
+                      imageFiles.length === 1 ? imageFiles[0].name :
+                          `${imageFiles.length} images selected`}
+                </span>
+                {imageFiles.length > 0 && (
+                    <button
+                        type="button"
+                        onClick={(e) => { e.preventDefault(); setImageFiles([]); }}
+                        className="text-muted-foreground hover:text-foreground"
+                    >
+                      <X className="w-3.5 h-3.5" />
+                    </button>
+                )}
                 <input
                     type="file"
                     accept="image/*"
+                    multiple
                     className="hidden"
-                    onChange={(e) => setImageFile(e.target.files[0] || null)}
+                    onChange={(e) => setImageFiles(Array.from(e.target.files))}
                 />
               </label>
+              {imageFiles.length > 0 && (
+                  <p className="text-xs text-muted-foreground mt-1">
+                    {imageFiles.length} file{imageFiles.length !== 1 ? 's' : ''} selected
+                  </p>
+              )}
             </div>
 
             <div className="flex gap-3 pt-2">
@@ -200,60 +222,192 @@ function ProjectFormModal({ project, onClose, onSaved }) {
 
 // ─── Image Manager ────────────────────────────────────────────────────────────
 function ImageManager({ project, onUpdated }) {
-  const [uploading, setUploading] = useState(false);
+  const [queue, setQueue]           = useState([]);
+  const [dragOver, setDragOver]     = useState(false);
   const [deletingId, setDeletingId] = useState(null);
-  const [error, setError] = useState('');
+  const [globalError, setGlobalError] = useState('');
+  const inputRef = useRef(null);
 
-  const handleUpload = async (e) => {
-    const file = e.target.files[0];
-    if (!file) return;
-    setError('');
-    setUploading(true);
-    try {
-      const res = await projectsApi.uploadImage(project.id, file);
-      onUpdated(res.data);
-    } catch (err) {
-      setError(err.message || 'Upload failed.');
-    } finally {
-      setUploading(false);
-      e.target.value = '';
+  const addFiles = (rawFiles) => {
+    const allowed = Array.from(rawFiles).filter((f) => f.type.startsWith('image/')).slice(0, 10);
+    if (!allowed.length) return;
+    const entries = allowed.map((file) => ({
+      id: `${file.name}-${Date.now()}-${Math.random()}`,
+      file,
+      preview: URL.createObjectURL(file),
+      status: 'pending',
+      error: '',
+    }));
+    setQueue((q) => [...q, ...entries]);
+  };
+
+  const uploadAll = async () => {
+    const pending = queue.filter((q) => q.status === 'pending');
+    if (!pending.length) return;
+    setGlobalError('');
+    setQueue((q) =>
+        q.map((item) => pending.some((p) => p.id === item.id) ? { ...item, status: 'uploading' } : item)
+    );
+    const tryUploadOne = async (item) => {
+      try {
+        const res = await projectsApi.uploadImage(project.id, item.file);
+        onUpdated(res.data);
+        setQueue((q) => q.map((i) => i.id === item.id ? { ...i, status: 'done' } : i));
+      } catch (e) {
+        setQueue((q) => q.map((i) => i.id === item.id ? { ...i, status: 'error', error: e.message || 'Failed' } : i));
+      }
+    };
+    if (pending.length === 1) {
+      await tryUploadOne(pending[0]);
+    } else {
+      try {
+        const res = await projectsApi.uploadImages(project.id, pending.map((p) => p.file));
+        onUpdated(res.data);
+        setQueue((q) =>
+            q.map((item) => pending.some((p) => p.id === item.id) ? { ...item, status: 'done' } : item)
+        );
+      } catch {
+        // Batch failed — fall back to individual uploads
+        for (const item of pending) {
+          await tryUploadOne(item);
+        }
+      }
     }
+    setTimeout(() => setQueue((q) => q.filter((i) => i.status !== 'done')), 1200);
+  };
+
+  const removeFromQueue = (id) => {
+    setQueue((q) => {
+      const item = q.find((i) => i.id === id);
+      if (item?.preview) URL.revokeObjectURL(item.preview);
+      return q.filter((i) => i.id !== id);
+    });
   };
 
   const handleDelete = async (publicId) => {
-    setError('');
+    setGlobalError('');
     setDeletingId(publicId);
     try {
       const res = await projectsApi.deleteImage(project.id, publicId);
       onUpdated(res.data);
     } catch (err) {
-      setError(err.message || 'Delete failed.');
+      setGlobalError(err.message || 'Delete failed.');
     } finally {
       setDeletingId(null);
     }
   };
 
+  const hasPending  = queue.some((i) => i.status === 'pending');
+  const isUploading = queue.some((i) => i.status === 'uploading');
+  const pendingCount = queue.filter((i) => i.status === 'pending').length;
+
   return (
-      <div className="mt-3">
-        {error && <p className="text-destructive text-xs mb-2">{error}</p>}
-        <div className="flex flex-wrap gap-2 mb-2">
-          {project.images?.map((img) => (
-              <div key={img.publicId} className="relative group w-16 h-16 rounded-lg overflow-hidden border border-border">
-                <img src={img.url} alt="" className="w-full h-full object-cover" />
-                <button
-                    onClick={() => handleDelete(img.publicId)}
-                    disabled={!!deletingId}
-                    className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white"
-                >
-                  {deletingId === img.publicId ? <Spinner /> : <Trash2 className="w-4 h-4" />}
-                </button>
-              </div>
-          ))}
-          <label className="w-16 h-16 rounded-lg border border-dashed border-border flex items-center justify-center cursor-pointer hover:border-gold/50 text-muted-foreground transition-colors">
-            {uploading ? <Spinner /> : <Upload className="w-4 h-4" />}
-            <input type="file" accept="image/*" className="hidden" onChange={handleUpload} disabled={uploading} />
-          </label>
+      <div className="mt-4 space-y-3" onClick={(e) => e.stopPropagation()}>
+        {globalError && (
+            <p className="text-destructive text-xs flex items-center gap-1">
+              <AlertCircle className="w-3 h-3" /> {globalError}
+            </p>
+        )}
+
+        {/* Existing saved images */}
+        {project.images?.length > 0 && (
+            <div className="flex flex-wrap gap-2">
+              {project.images.map((img) => (
+                  <div key={img.publicId} className="relative group w-16 h-16 rounded-lg overflow-hidden border border-border flex-shrink-0">
+                    <img src={img.url} alt="" className="w-full h-full object-cover" />
+                    <button
+                        onClick={() => handleDelete(img.publicId)}
+                        disabled={!!deletingId}
+                        className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white"
+                    >
+                      {deletingId === img.publicId ? <Spinner /> : <Trash2 className="w-3.5 h-3.5" />}
+                    </button>
+                  </div>
+              ))}
+            </div>
+        )}
+
+        {/* Drop zone */}
+        <div
+            onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
+            onDragLeave={() => setDragOver(false)}
+            onDrop={(e) => { e.preventDefault(); setDragOver(false); addFiles(e.dataTransfer.files); }}
+            onClick={() => inputRef.current?.click()}
+            className={`flex flex-col items-center justify-center gap-1.5 py-5 rounded-xl border-2 border-dashed cursor-pointer transition-all text-sm select-none
+          ${dragOver ? 'border-gold bg-gold/5 text-gold' : 'border-border hover:border-gold/50 text-muted-foreground hover:text-foreground'}`}
+        >
+          <ImagePlus className="w-6 h-6" />
+          <span className="font-medium">Drop images here or <span className="text-gold underline">browse</span></span>
+          <span className="text-xs opacity-60">Up to 10 images · JPG, PNG, WEBP</span>
+          <input
+              ref={inputRef}
+              type="file"
+              accept="image/*"
+              multiple
+              className="hidden"
+              onChange={(e) => { addFiles(e.target.files); e.target.value = ''; }}
+          />
         </div>
+
+        {/* Upload queue */}
+        {queue.length > 0 && (
+            <div className="space-y-2">
+              <p className="text-xs font-medium text-muted-foreground uppercase tracking-widest">
+                Queue ({queue.length})
+              </p>
+              <div className="flex flex-wrap gap-2">
+                {queue.map((item) => (
+                    <div key={item.id} className="relative w-16 h-16 rounded-lg overflow-hidden border border-border flex-shrink-0">
+                      <img src={item.preview} alt="" className="w-full h-full object-cover" />
+                      {item.status === 'uploading' && (
+                          <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
+                            <Loader2 className="w-4 h-4 text-white animate-spin" />
+                          </div>
+                      )}
+                      {item.status === 'done' && (
+                          <div className="absolute inset-0 bg-green-500/60 flex items-center justify-center">
+                            <span className="text-white text-xl font-bold leading-none">✓</span>
+                          </div>
+                      )}
+                      {item.status === 'error' && (
+                          <div className="absolute inset-0 bg-destructive/70 flex flex-col items-center justify-center p-1">
+                            <AlertCircle className="w-4 h-4 text-white" />
+                            <span className="text-[9px] text-white text-center leading-tight mt-0.5 line-clamp-2">{item.error}</span>
+                          </div>
+                      )}
+                      {(item.status === 'pending' || item.status === 'error') && (
+                          <button
+                              onClick={(e) => { e.stopPropagation(); removeFromQueue(item.id); }}
+                              className="absolute top-0.5 right-0.5 w-4 h-4 rounded-full bg-black/70 text-white flex items-center justify-center hover:bg-black transition-colors"
+                          >
+                            <X className="w-2.5 h-2.5" />
+                          </button>
+                      )}
+                    </div>
+                ))}
+              </div>
+              <div className="flex gap-2 pt-1">
+                {hasPending && (
+                    <button
+                        onClick={uploadAll}
+                        disabled={isUploading}
+                        className="flex items-center gap-1.5 px-4 py-1.5 bg-gradient-gold text-white text-xs font-bold rounded-full disabled:opacity-60 transition-all hover:shadow-md"
+                    >
+                      {isUploading ? <Loader2 className="w-3 h-3 animate-spin" /> : <Upload className="w-3 h-3" />}
+                      {isUploading ? 'Uploading…' : `Upload ${pendingCount} image${pendingCount !== 1 ? 's' : ''}`}
+                    </button>
+                )}
+                {!isUploading && (
+                    <button
+                        onClick={() => setQueue([])}
+                        className="px-3 py-1.5 text-xs text-muted-foreground hover:text-foreground border border-border rounded-full transition-colors"
+                    >
+                      Clear all
+                    </button>
+                )}
+              </div>
+            </div>
+        )}
       </div>
   );
 }
@@ -300,8 +454,8 @@ export default function AdminDashboard() {
     }
   }, []);
 
-  useEffect(() => { 
-    fetchProjects(); 
+  useEffect(() => {
+    fetchProjects();
     fetchReviews();
   }, [fetchProjects, fetchReviews]);
 

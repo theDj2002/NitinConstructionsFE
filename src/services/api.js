@@ -114,14 +114,22 @@ export const projectsApi = {
   delete: (id) =>
       request(`/api/projects/${id}`, { method: 'DELETE' }),
 
-  // POST /api/projects/:id/images/upload  (multipart, field: "image")
-  uploadImage: (id, file) => {
-    const formData = new FormData();
-    formData.append('image', file);
-    return requestMultipart(`/api/projects/${id}/images/upload`, formData);
-  },
+    // POST /api/projects/:id/images/upload  (multipart, field: "image") — single file
+    uploadImage: (id, file) => {
+        const formData = new FormData();
+        formData.append('image', file);
+        return requestMultipart(`/api/projects/${id}/images/upload`, formData);
+    },
 
-  // DELETE /api/projects/:id/images/:publicId
+    // POST /api/projects/:id/images/upload-multiple  (multipart, field: "images") — up to 10 files
+    uploadImages: (id, files) => {
+        const formData = new FormData();
+        files.forEach((f) => formData.append('images', f));
+        return requestMultipart(`/api/projects/${id}/images/upload-multiple`, formData);
+    },
+
+
+    // DELETE /api/projects/:id/images/:publicId
   // Cloudinary publicId includes folder prefix e.g. "nkp-construction/xyzabc"
   // encodeURIComponent encodes the "/" → "%2F". Spring Boot 3 with the default
   // path matcher decodes %2F in @PathVariable correctly.
