@@ -38,7 +38,7 @@ export default function HeroSection() {
 
           <p className="animate-fade-up-d2 mt-6 text-base sm:text-lg text-white/70 leading-relaxed max-w-xl">
             From foundation to finish, NKP Construction delivers quality infrastructure,
-            excavation, and structural solutions trusted by clients across India since 2010.
+            excavation, and structural solutions trusted by clients across India since 2019.
           </p>
 
           <div className="animate-fade-up-d3 mt-8 flex flex-col sm:flex-row gap-4">

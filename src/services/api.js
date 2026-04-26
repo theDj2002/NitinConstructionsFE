@@ -69,7 +69,7 @@ export const projectsApi = {
 
   // POST /api/projects
   create: (projectData) =>
-      request('/api/projects', {
+      request('/api/projects/create', {
         method: 'POST',
         body: JSON.stringify(projectData),
       }),

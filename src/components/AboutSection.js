@@ -30,7 +30,7 @@ export default function AboutSection() {
               className="absolute -bottom-6 -right-4 sm:bottom-6 sm:right-6 bg-gold text-white px-6 py-4 rounded-xl shadow-lg"
             >
               <p className="text-sm font-medium opacity-80">Established</p>
-              <p className="text-3xl font-heading font-bold">2010</p>
+              <p className="text-3xl font-heading font-bold">2019</p>
             </div>
           </div>
 
@@ -40,7 +40,7 @@ export default function AboutSection() {
               Crafting Excellence in Every Structure
             </h2>
             <p className="mt-5 text-muted-foreground leading-relaxed">
-              NKP Construction has been a trusted name in the construction industry since 2010.
+              NKP Construction has been a trusted name in the construction industry since 2019.
               We specialize in infrastructure, excavation, structural work, and complete project
               development, delivering quality results that exceed expectations.
             </p>
