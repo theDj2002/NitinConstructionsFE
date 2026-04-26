@@ -220,7 +220,7 @@ export default function IntroAnimation() {
           <div className="nkp-ring-3" />
 
           {/* Company name */}
-          <div className="nkp-company-name">NKP CONSTRUCTIONS</div>
+          {/*<div className="nkp-company-name">NKP CONSTRUCTIONS</div>*/}
 
           {/* Logo */}
           <img className="nkp-logo-img" src={LOGO_SRC} alt="NKP Logo" />
