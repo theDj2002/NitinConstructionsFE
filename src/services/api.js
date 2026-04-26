@@ -1,5 +1,5 @@
 // ─── API Base ─────────────────────────────────────────────────────────────────
-const BASE_URL = process.env.REACT_APP_API_URL || 'https://nitin-constructions-be.onrender.com';
+const BASE_URL = process.env.REACT_APP_API_URL || 'https://localhost:6969/api/health';
 
 // ─── Token helpers ────────────────────────────────────────────────────────────
 export const tokenStorage = {
@@ -7,7 +7,32 @@ export const tokenStorage = {
   set: (token) => localStorage.setItem('nkp_token', token),
   remove: () => localStorage.removeItem('nkp_token'),
 };
+// ─── Heartbeat / Keep Alive ───────────────────────────────────────────────────
+// Calls health endpoint every 5 minutes so Render service stays warm
+let heartbeatStarted = false;
 
+function startHeartbeat() {
+    if (heartbeatStarted) return;
+    heartbeatStarted = true;
+
+    const ping = async () => {
+        try {
+            await fetch(`${BASE_URL}/api/health`, {
+                method: "GET",
+                cache: "no-store",
+            });
+            console.log("💓 Backend heartbeat sent");
+        } catch (error) {
+            console.warn("Heartbeat failed:", error.message);
+        }
+    };
+
+    ping(); // run immediately
+    setInterval(ping, 3 * 60 * 1000); // every 3 mins
+}
+
+// Start heartbeat automatically when app loads
+startHeartbeat();
 // ─── Core fetch wrapper ───────────────────────────────────────────────────────
 async function request(path, options = {}) {
   const token = tokenStorage.get();
