@@ -37,7 +37,7 @@ export default function ServicesSection() {
               Our Expertise
             </h2>
             <p className="mt-4 text-muted-foreground max-w-2xl mx-auto text-base">
-              With over 14 years of experience, we deliver comprehensive construction solutions that stand the test of time.
+              With over 7 years of experience, we deliver comprehensive construction solutions that stand the test of time.
             </p>
           </div>
 
