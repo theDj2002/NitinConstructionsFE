@@ -1,7 +1,8 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { projectsApi } from '@/services/api';
 import { MapPin, Calendar, ImageOff, Loader2, ChevronLeft, ChevronRight, X } from 'lucide-react';
 import { ProjectReviewsModal } from '@/components/ProjectReviews';
+import { useAutoRefresh } from '@/hooks/useAutoRefresh';
 
 // ─── Image Lightbox ───────────────────────────────────────────────────────────
 function Lightbox({ images, startIndex, onClose }) {
@@ -181,19 +182,19 @@ export default function ProjectsSection() {
     const [error, setError] = useState('');
     const [filter, setFilter] = useState('All');
 
-    useEffect(() => {
-        const load = async () => {
-            try {
-                const res = await projectsApi.getPublic();
-                setProjects(res.data || []);
-            } catch (err) {
-                setError('Could not load projects. Please try again later.');
-            } finally {
-                setLoading(false);
-            }
-        };
-        load();
+    const load = useCallback(async () => {
+        try {
+            const res = await projectsApi.getPublic();
+            setProjects(res.data || []);
+        } catch (err) {
+            setError('Could not load projects. Please try again later.');
+        } finally {
+            setLoading(false);
+        }
     }, []);
+
+    // Auto-refresh every 30 s — picks up images added/deleted via admin panel
+    useAutoRefresh(load, 30_000);
 
     // Derive unique types for filter tabs
     const types = ['All', ...Array.from(new Set(projects.map((p) => p.type).filter(Boolean)))];

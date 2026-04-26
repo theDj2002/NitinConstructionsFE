@@ -7,6 +7,7 @@ import {
   Upload, X, ImagePlus, Loader2, AlertCircle,
   MessageSquare, Star, Trash
 } from 'lucide-react';
+import { useAutoRefresh } from '@/hooks/useAutoRefresh';
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 function Badge({ visible }) {
@@ -459,12 +460,32 @@ export default function AdminDashboard() {
     fetchReviews();
   }, [fetchProjects, fetchReviews]);
 
+  // Also poll every 30 s so external API actions (new reviews, image uploads) appear automatically
+  const { refresh: refreshProjects } = useAutoRefresh(fetchProjects, 30_000);
+  const { refresh: refreshReviews }  = useAutoRefresh(fetchReviews,  30_000);
+
+  const handleDeleteReview = async (id) => {
+    if (!window.confirm('Delete this review? This cannot be undone.')) return;
+    setDeletingId(id);
+    try {
+      await reviewsApi.delete(id);
+      setReviews((prev) => prev.filter((r) => r.id !== id));
+      refreshReviews();
+    } catch (err) {
+      alert(err.message || 'Delete review failed.');
+    } finally {
+      setDeletingId(null);
+    }
+  };
+
   if (!isAuthenticated) return <Navigate to="/" replace />;
 
   const handleSaved = (saved, isEdit) => {
     setProjects((prev) =>
         isEdit ? prev.map((p) => (p.id === saved.id ? saved : p)) : [saved, ...prev]
     );
+    // Re-fetch to ensure images and all fields are up to date
+    refreshProjects();
   };
 
   const handleToggle = async (id) => {
@@ -472,6 +493,7 @@ export default function AdminDashboard() {
     try {
       const res = await projectsApi.toggleVisibility(id);
       setProjects((prev) => prev.map((p) => (p.id === id ? res.data : p)));
+      refreshProjects();
     } catch (err) {
       alert(err.message || 'Toggle failed.');
     } finally {
@@ -485,6 +507,7 @@ export default function AdminDashboard() {
     try {
       await projectsApi.delete(id);
       setProjects((prev) => prev.filter((p) => p.id !== id));
+      refreshProjects();
     } catch (err) {
       alert(err.message || 'Delete failed.');
     } finally {
@@ -655,9 +678,11 @@ export default function AdminDashboard() {
                               {expandedImages === project.id && (
                                   <ImageManager
                                       project={project}
-                                      onUpdated={(updated) =>
-                                          setProjects((prev) => prev.map((p) => (p.id === updated.id ? updated : p)))
-                                      }
+                                      onUpdated={(updated) => {
+                                        setProjects((prev) => prev.map((p) => (p.id === updated.id ? updated : p)));
+                                        // Re-fetch all projects so public site also sees the change
+                                        refreshProjects();
+                                      }}
                                   />
                               )}
                             </div>

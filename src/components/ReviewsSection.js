@@ -1,7 +1,8 @@
-import { useState, useEffect } from 'react';
+import { useState, useCallback } from 'react';
 import { reviewsApi } from '@/services/api';
 import { Star, User, MessageSquare, Loader2, Send } from 'lucide-react';
 import { toast } from 'sonner';
+import { useAutoRefresh } from '@/hooks/useAutoRefresh';
 
 function RatingStars({ rating, setRating, interactive = false }) {
     const [hover, setHover] = useState(0);
@@ -65,21 +66,19 @@ export default function ReviewsSection() {
     const [submitting, setSubmitting] = useState(false);
     const [form, setForm] = useState({ user_name: '', rating: 5, comment: '' });
 
-    useEffect(() => {
-        loadReviews();
-    }, []);
-
-    const loadReviews = async () => {
+    const loadReviews = useCallback(async () => {
         try {
             const res = await reviewsApi.getAll();
-            // Backend: ApiResponse<List<ReviewResponse>> → res.data is the array
             setReviews(Array.isArray(res.data) ? res.data : []);
         } catch (err) {
             console.error('Failed to load reviews:', err);
         } finally {
             setLoading(false);
         }
-    };
+    }, []);
+
+    // Auto-refresh every 20 s to pick up reviews added via external API calls
+    const { refresh } = useAutoRefresh(loadReviews, 20_000);
 
     const handleSubmit = async (e) => {
         e.preventDefault();
@@ -90,15 +89,15 @@ export default function ReviewsSection() {
         setSubmitting(true);
         try {
             // Backend expects camelCase: userName, rating, comment (no projectId = general review)
-            const res = await reviewsApi.create({
+            await reviewsApi.create({
                 userName: form.user_name,
                 rating:   form.rating,
                 comment:  form.comment,
             });
-            const newReview = res.data || res;
-            setReviews((prev) => [newReview, ...prev]);
             setForm({ user_name: '', rating: 5, comment: '' });
             toast.success('Thank you for your review!');
+            // Immediately re-fetch so the new review appears at the top
+            refresh();
         } catch (err) {
             toast.error('Failed to submit review. Please try again.');
         } finally {

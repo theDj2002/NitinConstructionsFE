@@ -25,13 +25,13 @@ export default function AboutSection() {
                 data-testid="about-image"
               />
             </div>
-            <div
-              data-testid="about-est-card"
-              className="absolute -bottom-6 -right-4 sm:bottom-6 sm:right-6 bg-gold text-white px-6 py-4 rounded-xl shadow-lg"
-            >
-              <p className="text-sm font-medium opacity-80">Established</p>
-              <p className="text-3xl font-heading font-bold">2019</p>
-            </div>
+            {/*<div*/}
+            {/*  data-testid="about-est-card"*/}
+            {/*  className="absolute -bottom-6 -right-4 sm:bottom-6 sm:right-6 bg-gold text-white px-6 py-4 rounded-xl shadow-lg"*/}
+            {/*>*/}
+            {/*  <p className="text-sm font-medium opacity-80">Established</p>*/}
+            {/*  <p className="text-3xl font-heading font-bold">2019</p>*/}
+            {/*</div>*/}
           </div>
 
           <div>

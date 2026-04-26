@@ -13,10 +13,15 @@ import Footer from '@/components/Footer';
 import AdminDashboard from '@/pages/AdminDashboard';
 import ReviewsSection from '@/components/ReviewsSection';
 
-// ─── NEW: Intro Animation ──────────────────────────────────────────────────
 import IntroAnimation from '@/components/IntroAnimation';
+import { useScrollSection } from '@/hooks/useScrollSection';
 
+// ─── Landing page ─────────────────────────────────────────────────────────────
 function LandingPage() {
+    // Reads URL hash on mount → scrolls to saved section (survives refresh).
+    // Updates hash as user scrolls → next refresh lands on same section.
+    useScrollSection();
+
     return (
         <>
             <HeroSection />
