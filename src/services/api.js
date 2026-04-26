@@ -133,14 +133,22 @@ export const projectsApi = {
 
 // ─── Reviews API ──────────────────────────────────────────────────────────────
 export const reviewsApi = {
-  getAll: () => request('/api/reviews'),
-  create: (reviewData) =>
-      request('/api/reviews', {
-        method: 'POST',
-        body: JSON.stringify(reviewData),
-      }),
-  delete: (id) =>
-      request(`/api/reviews/${id}`, { method: 'DELETE' }),
+    // GET /api/reviews/general  — site-level reviews (no project)
+    getAll: () => request('/api/reviews/general'),
+
+    // GET /api/reviews?projectId={id}  — reviews for a specific project
+    getByProject: (projectId) => request(`/api/reviews?projectId=${projectId}`),
+
+    // POST /api/reviews  — body: { projectId?, userName, rating, comment }
+    create: (reviewData) =>
+        request('/api/reviews', {
+            method: 'POST',
+            body: JSON.stringify(reviewData),
+        }),
+
+    // DELETE /api/reviews/{id}  — admin only
+    delete: (id) =>
+        request(`/api/reviews/${id}`, { method: 'DELETE' }),
 };
 
 // ─── Upload API (standalone Cloudinary upload without attaching to a project) ──

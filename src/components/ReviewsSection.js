@@ -26,21 +26,24 @@ function RatingStars({ rating, setRating, interactive = false }) {
 }
 
 function ReviewCard({ review }) {
+    // Backend returns camelCase: userName, createdAt
+    const name = review.userName ?? review.user_name ?? 'Anonymous';
+    const date = review.createdAt ?? review.timestamp;
     return (
         <div className="bg-card border border-border p-6 rounded-2xl shadow-sm hover:shadow-md transition-shadow">
             <div className="flex justify-between items-start mb-4">
                 <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-full bg-gold/10 flex items-center justify-center text-gold">
-                        <User className="w-5 h-5" />
+                    <div className="w-10 h-10 rounded-full bg-gold/10 flex items-center justify-center text-gold font-bold text-sm">
+                        {name[0]?.toUpperCase() ?? <User className="w-5 h-5" />}
                     </div>
                     <div>
-                        <h4 className="font-heading font-bold text-foreground">{review.user_name}</h4>
+                        <h4 className="font-heading font-bold text-foreground">{name}</h4>
                         <p className="text-[10px] text-muted-foreground uppercase tracking-widest">
-                            {new Date(review.timestamp).toLocaleDateString(undefined, {
+                            {date ? new Date(date).toLocaleDateString(undefined, {
                                 year: 'numeric',
                                 month: 'short',
                                 day: 'numeric',
-                            })}
+                            }) : ''}
                         </p>
                     </div>
                 </div>
@@ -69,7 +72,8 @@ export default function ReviewsSection() {
     const loadReviews = async () => {
         try {
             const res = await reviewsApi.getAll();
-            setReviews(res.data || res); // Backend returns data nested or direct depending on wrapper
+            // Backend: ApiResponse<List<ReviewResponse>> → res.data is the array
+            setReviews(Array.isArray(res.data) ? res.data : []);
         } catch (err) {
             console.error('Failed to load reviews:', err);
         } finally {
@@ -79,13 +83,18 @@ export default function ReviewsSection() {
 
     const handleSubmit = async (e) => {
         e.preventDefault();
-        if (!form.user_name || !form.comment) {
+        if (!form.user_name.trim() || !form.comment.trim()) {
             toast.error('Please fill in all fields');
             return;
         }
         setSubmitting(true);
         try {
-            const res = await reviewsApi.create(form);
+            // Backend expects camelCase: userName, rating, comment (no projectId = general review)
+            const res = await reviewsApi.create({
+                userName: form.user_name,
+                rating:   form.rating,
+                comment:  form.comment,
+            });
             const newReview = res.data || res;
             setReviews((prev) => [newReview, ...prev]);
             setForm({ user_name: '', rating: 5, comment: '' });
@@ -101,7 +110,7 @@ export default function ReviewsSection() {
         <section id="reviews" className="py-24 bg-accent/30 overflow-hidden">
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                 <div className="grid grid-cols-1 lg:grid-cols-12 gap-16 items-start">
-                    
+
                     {/* Left: Heading & Form */}
                     <div className="lg:col-span-4 space-y-8">
                         <div>
@@ -110,14 +119,14 @@ export default function ReviewsSection() {
                                 What Our Clients Say
                             </h2>
                             <p className="mt-4 text-muted-foreground text-sm leading-relaxed">
-                                We take pride in our excellence and client satisfaction. 
+                                We take pride in our excellence and client satisfaction.
                                 Leave us a review to share your experience with our services.
                             </p>
                         </div>
 
                         <form onSubmit={handleSubmit} className="bg-card border border-border p-6 rounded-2xl shadow-xl space-y-4">
                             <h3 className="font-heading font-bold text-lg text-foreground mb-2">Leave a Review</h3>
-                            
+
                             <div>
                                 <label className="block text-xs font-medium text-muted-foreground uppercase mb-1.5">Full Name</label>
                                 <input

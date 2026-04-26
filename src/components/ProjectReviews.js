@@ -11,6 +11,7 @@
  */
 
 import { useState, useEffect, useRef } from 'react';
+import { reviewsApi } from '@/services/api';
 import { Star, User, MessageSquare, Send, Loader2, X, CheckCircle, PenLine, ChevronLeft } from 'lucide-react';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -95,7 +96,9 @@ function RatingSummary({ reviews }) {
 
 // ─── Single Review Card ───────────────────────────────────────────────────────
 function ReviewCard({ review }) {
-    const initial = review.user_name?.[0]?.toUpperCase() ?? '?';
+    // Backend returns camelCase: userName, createdAt
+    const name    = review.userName ?? review.user_name ?? 'Anonymous';
+    const initial = name[0]?.toUpperCase() ?? '?';
     return (
         <div className="bg-white/5 border border-white/10 rounded-xl p-4 space-y-2">
             <div className="flex items-start justify-between gap-2">
@@ -104,9 +107,9 @@ function ReviewCard({ review }) {
                         {initial}
                     </div>
                     <div>
-                        <p className="text-sm font-semibold text-white leading-none">{review.user_name}</p>
+                        <p className="text-sm font-semibold text-white leading-none">{name}</p>
                         <p className="text-[10px] text-gray-500 mt-0.5">
-                            {formatDate(review.timestamp ?? review.created_at)}
+                            {formatDate(review.createdAt ?? review.timestamp)}
                         </p>
                     </div>
                 </div>
@@ -134,19 +137,13 @@ function WriteReviewForm({ projectId, onSubmitted, onBack }) {
         setError('');
         setBusy(true);
         try {
-            // ── Replace with your real API call ─────────────────────────────────
-            // import { reviewsApi } from '@/services/api';
-            // const res = await reviewsApi.create({ project_id: projectId, ...form });
-            // onSubmitted(res.data || res);
-            // ── Mock (remove once backend ready) ─────────────────────────────────
-            await new Promise((r) => setTimeout(r, 800));
-            onSubmitted({
-                id: Date.now(),
-                project_id: projectId,
-                ...form,
-                timestamp: new Date().toISOString(),
+            const res = await reviewsApi.create({
+                projectId,
+                userName: form.user_name,
+                rating:   form.rating,
+                comment:  form.comment,
             });
-            // ────────────────────────────────────────────────────────────────────
+            onSubmitted(res.data || res);
             setSuccess(true);
             setForm({ user_name: '', rating: 5, comment: '' });
         } catch {
@@ -282,12 +279,8 @@ function ReviewsPanel({ projectId, projectName }) {
         const load = async () => {
             setLoading(true);
             try {
-                // ── Replace with real API ──────────────────────────────────────────
-                // const { reviewsApi } = await import('@/services/api');
-                // const res = await reviewsApi.getByProject(projectId);
-                // if (!cancelled) setReviews(res.data || []);
-                if (!cancelled) setReviews([]); // mock: empty initially
-                // ────────────────────────────────────────────────────────────────
+                const res = await reviewsApi.getByProject(projectId);
+                if (!cancelled) setReviews(res.data || []);
             } catch {
                 if (!cancelled) setReviews([]);
             } finally {
